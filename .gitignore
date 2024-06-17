@@ -1,0 +1,6 @@
+piler/
+*.o
+*.ju
+todo.md
+*.gch
+.vscode/
