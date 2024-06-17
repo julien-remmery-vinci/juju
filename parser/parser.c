@@ -268,7 +268,7 @@ program parse(Tokens tokens)
                     if(e->type == ADD)
                     {
                         prev = prev_exp(function_exp->u.func_def.program);
-                        checkNull(prev, "error prev exp is null");
+                        // checkNull(prev, "error prev exp is null");
                         //  diff ne montre aucune différence sur les 2 output ????
                         if(prev->type == AFFECT)
                         {
@@ -288,7 +288,7 @@ program parse(Tokens tokens)
                     if(e->type == AFFECT)
                     {
                         prev = prev_exp(function_exp->u.func_def.program);
-                        checkNull(prev, "error prev exp is null");
+                        // checkNull(prev, "error prev exp is null");
                         if(prev->type == VARIABLE)
                         {
                             exp id = new_exp();
