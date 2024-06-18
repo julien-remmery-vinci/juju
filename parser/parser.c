@@ -13,6 +13,15 @@ enum dataType {
     DATATYPE_INTEGER
 };
 
+enum reserved {
+    NONE,
+    RETURN,
+    IF,
+    WHILE,
+    DO_WHILE,
+    FOR
+};
+
 enum expType {
     INT,
     ID,
@@ -21,8 +30,9 @@ enum expType {
     DATATYPE,
     VARIABLE,
     FUNCTION_DEF,
-    FUNCTION_CALL
+    FUNCTION_CALL,
     // handle reserved words ex: return, if, for, while, do..while, ...
+    RESERVED
 };
 
 enum operations {
@@ -43,6 +53,7 @@ struct exp {
         int i;
         char* id;
         enum dataType dataType;
+        struct {enum reserved reserved; char* id; int i;} reserved;
         struct {enum dataType dataType; char* id;} var;
         struct {exp e1; exp e2;} add;
         struct {exp e1; exp e2;} affect;
@@ -62,7 +73,7 @@ int numNodes(exp e)
     }
 }
 
-enum dataType getDatatype(char* str)
+enum dataType isDatatype(char* str)
 {
     enum dataType type;
     if(strcmp(str, "int") == 0) {
@@ -71,6 +82,17 @@ enum dataType getDatatype(char* str)
     }
     type = DATATYPE_NONE;
     return type;
+}
+
+enum reserved isReserved(char* str)
+{
+    enum reserved r;
+    if(strcmp(str, "return") == 0) {
+        r = RETURN;
+        return r;
+    }
+    r = NONE;
+    return r;
 }
 
 bool isnum(char* str)
@@ -99,7 +121,8 @@ enum operations isoperator(char* str)
 
 exp new_exp()
 {
-    return malloc(sizeof(exp));
+    exp new = malloc(sizeof(*new));
+    return new;
 }
 
 exp prev_exp(program p)
@@ -120,11 +143,20 @@ exp next_exp(Tokens tokens, int* i)
         return next;
     }
 
-    enum dataType type = getDatatype(token);
+    enum dataType type = isDatatype(token);
     if(type != DATATYPE_NONE)
     {
         next->type = DATATYPE;
         next->u.dataType = type;
+        return next;
+    }
+
+    enum reserved reserved = isReserved(token);
+    if(reserved != NONE)
+    {
+        next->type = RESERVED;
+        next->u.reserved.reserved = RETURN;
+        next->u.reserved.id = token;
         return next;
     }
 
@@ -165,14 +197,6 @@ void print_exp(exp e)
 {
     switch(e->type)
     {
-        case(VARIABLE):
-            switch (e->u.var.dataType)
-            {
-                case DATATYPE_INTEGER:
-                    printf("int %s", e->u.var.id);
-                    break;
-            }
-            break;
         case(AFFECT):
             print_exp(e->u.affect.e1);
             printf(" = ");
@@ -189,15 +213,34 @@ void print_exp(exp e)
         case(ID):
             printf("%s", e->u.id);
             break;
+        case(VARIABLE):
+            switch (e->u.var.dataType)
+            {
+                case DATATYPE_INTEGER:
+                    printf("int %s", e->u.var.id);
+                    break;
+            }
+            break;
+        case(RESERVED):
+            switch(e->u.reserved.reserved)
+            {
+                case(RETURN):
+                    printf("return %d", e->u.reserved.i);
+                    break;
+            }
+            break;
         case(FUNCTION_DEF):
-            printf("%d\n", e->u.func_def.returnType);
-            printf("%d %s () {\n", e->u.func_def.returnType, e->u.func_def.id);
+            printf("%s %s () {\n", e->u.func_def.returnType == 1 ? "int" : "", e->u.func_def.id);
             for (int i = 0; i < e->u.func_def.program.nbExp; i++)
             {
+                printf("    ");
                 print_exp(e->u.func_def.program.expressions[i]);
-                printf("\n");
+                printf(";\n");
             }
-            printf("\n}");
+            printf("}");
+            break;
+        case(FUNCTION_CALL):
+            printf("%s()", e->u.func_call.id);
             break;
         default:
             printf("not yet implemented exp type printing: %d\n", e->type);
@@ -207,11 +250,13 @@ void print_exp(exp e)
 
 void print_program(program program)
 {
+    printf("----------------\nprinting program\n----------------\n");
     for (int i = 0; i < program.nbExp; i++)
     {
         print_exp(program.expressions[i]);
         printf("\n");
     }
+    printf("---------------\nend of printing\n---------------\n");
 }
 
 program parse(Tokens tokens)
@@ -232,8 +277,8 @@ program parse(Tokens tokens)
             if(prev->type == VARIABLE)
             {
                 function_exp->type = FUNCTION_DEF;
-                // function_exp->u.func_def.returnType = prev->u.var.dataType;
-                // function_exp->u.func_def.id = prev->u.var.id;
+                function_exp->u.func_def.returnType = prev->u.var.dataType;
+                function_exp->u.func_def.id = prev->u.var.id;
                 while(!iscloseparenthese(token))
                 {
                     // handle function params -> store params
@@ -248,11 +293,27 @@ program parse(Tokens tokens)
                 while(!isclosebrace(token))
                 {
                     token = tokens.tokens[i].token;
+                    prev = prev_exp(function_exp->u.func_def.program);
                     // printf("token: %s\n", token);
                     
                     if (issemicolon(token))
                     {
                         i++;
+                        continue;
+                    }
+                    if(isopenparenthese(token) && prev->type == ID)
+                    {
+                        e = new_exp();
+                        e->type = FUNCTION_CALL;
+                        e->u.func_call.id = prev->u.id;
+                        add_exp(&function_exp->u.func_def.program, e, -1);
+                        // add handle passing params to function call
+                        while(!iscloseparenthese(token))
+                        {
+                            i++;
+                            token = tokens.tokens[i].token;
+                        }
+                        i += 2;
                         continue;
                     }
 
@@ -265,10 +326,19 @@ program parse(Tokens tokens)
                         continue;
                     }
 
+                    if(e->type == RESERVED)
+                    {
+                        if(e->u.reserved.reserved == RETURN)
+                        {
+                            exp next = next_exp(tokens, &i);
+                            e->u.reserved.i = next->u.i;
+                            add_exp(&function_exp->u.func_def.program, e, 0);
+                            continue;
+                        }
+                    }
+
                     if(e->type == ADD)
                     {
-                        prev = prev_exp(function_exp->u.func_def.program);
-                        // checkNull(prev, "error prev exp is null");
                         //  diff ne montre aucune différence sur les 2 output ????
                         if(prev->type == AFFECT)
                         {
@@ -287,27 +357,27 @@ program parse(Tokens tokens)
 
                     if(e->type == AFFECT)
                     {
-                        prev = prev_exp(function_exp->u.func_def.program);
-                        // checkNull(prev, "error prev exp is null");
-                        if(prev->type == VARIABLE)
-                        {
-                            exp id = new_exp();
-                            id->type = ID;
-                            id->u.id = prev->u.var.id;
-                            e->u.affect.e1 = id;
-                            e->u.affect.e2 = next_exp(tokens, &i);
-                            add_exp(&function_exp->u.func_def.program, e, 0);
-                        }
-                        else
-                        {
-                            e->u.affect.e1 = prev;
-                            e->u.affect.e2 = next_exp(tokens, &i);
-                            add_exp(&function_exp->u.func_def.program, e, -1);
-                        }
+                        // if(prev->type == VARIABLE)
+                        // {
+                        //     exp id = new_exp();
+                        //     id->type = ID;
+                        //     id->u.id = prev->u.var.id;
+                        //     e->u.affect.e1 = id;
+                        //     e->u.affect.e2 = next_exp(tokens, &i);
+                        //     add_exp(&function_exp->u.func_def.program, e, 0);
+                        // }
+                        // else
+                        // {
+                        //     e->u.affect.e1 = prev;
+                        //     e->u.affect.e2 = next_exp(tokens, &i);
+                        //     add_exp(&function_exp->u.func_def.program, e, -1);
+                        // }
+                        e->u.affect.e1 = prev;
+                        e->u.affect.e2 = next_exp(tokens, &i);
+                        add_exp(&function_exp->u.func_def.program, e, -1);
                         continue;
                     }
 
-                    prev = prev_exp(function_exp->u.func_def.program);
                     if(prev != NULL && e->type == ID && function_exp->u.func_def.program.nbExp > 0 && prev->type == DATATYPE)
                     {
                         exp new = new_exp();
@@ -317,15 +387,9 @@ program parse(Tokens tokens)
                         add_exp(&function_exp->u.func_def.program, new, -1);
                         continue;
                     }
+                    add_exp(&function_exp->u.func_def.program, e, 0);
                 }
-                // i++;
             }
-            else if(prev->type == ID)
-            {
-                function_exp->type = FUNCTION_CALL;
-                // handle function call -> params values passed
-            }
-            else {}
 
             add_exp(&program, function_exp, -1);
 
