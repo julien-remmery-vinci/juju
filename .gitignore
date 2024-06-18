@@ -4,3 +4,5 @@ piler/
 todo.md
 *.gch
 .vscode/
+parser
+lexer
