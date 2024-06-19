@@ -31,6 +31,7 @@ char* next_token(FILE* file) {
             case('{'):
             case('}'):
             case(';'):
+            case(','):
             case('='):
             case('+'):
             case('-'):

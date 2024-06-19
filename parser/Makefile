@@ -1,8 +1,8 @@
 parser: parser.o lexer.o utils.o
 	gcc -g -o parser parser.o lexer.o utils.o
 
-parser.o: parser.c
-	gcc -g -c parser.c
+parser.o: parser.c parser.h
+	gcc -g -c parser.c parser.h
 
 lexer.o: ../lexer/lexer.c ../lexer/lexer.h
 	gcc -g -c ../lexer/lexer.c ../lexer/lexer.h
