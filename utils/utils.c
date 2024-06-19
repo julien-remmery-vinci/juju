@@ -25,35 +25,35 @@ void checkNull(void* arg, char* message)
 
 bool issemicolon(char* str)
 {
-    return str[0] == ';' ? true : false;
+    return *str == ';';
 }
 
 bool isopenparenthese(char* str)
 {
-    return str[0] == '(' ? true : false;
+    return *str == '(';
 }
 
 bool iscloseparenthese(char* str)
 {
-    return str[0] == ')' ? true : false;
+    return *str == ')';
 }
 
 bool isopenbrace(char* str)
 {
-    return str[0] == '{' ? true : false;
+    return *str == '{';
 }
 
 bool isclosebrace(char* str)
 {
-    return str[0] == '}' ? true : false;
+    return *str == '}';
 }
 
 bool isopenbracket(char* str)
 {
-    return str[0] == '[' ? true : false;
+    return *str == '[';
 }
 
 bool isclosebracket(char* str)
 {
-    return str[0] == ']' ? true : false;
+    return *str == ']';
 }
