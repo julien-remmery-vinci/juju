@@ -2,8 +2,6 @@
 #define _UTILS_H
 
 #include <stdlib.h>
-#include <stdbool.h>
-
 
 void print_usage(char** argv);
 
@@ -11,18 +9,18 @@ void print_error(char* message);
 
 void checkNull(void* arg, char* message);
 
-bool issemicolon(char* str);
+int issemicolon(char* str);
 
-bool isopenparenthese(char* str);
+int isopenparenthese(char* str);
 
-bool iscloseparenthese(char* str);
+int iscloseparenthese(char* str);
 
-bool isopenbrace(char* str);
+int isopenbrace(char* str);
 
-bool isclosebrace(char* str);
+int isclosebrace(char* str);
 
-bool isopenbracket(char* str);
+int isopenbracket(char* str);
 
-bool isclosebracket(char* str);
+int isclosebracket(char* str);
 
 #endif

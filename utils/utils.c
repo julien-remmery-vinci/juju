@@ -23,37 +23,16 @@ void checkNull(void* arg, char* message)
     }
 }
 
-bool issemicolon(char* str)
-{
-    return *str == ';';
-}
+int issemicolon(char* str) {return *str == ';';}
 
-bool isopenparenthese(char* str)
-{
-    return *str == '(';
-}
+int isopenparenthese(char* str) {return *str == '(';}
 
-bool iscloseparenthese(char* str)
-{
-    return *str == ')';
-}
+int iscloseparenthese(char* str) {return *str == ')';}
 
-bool isopenbrace(char* str)
-{
-    return *str == '{';
-}
+int isopenbrace(char* str) {return *str == '{';}
 
-bool isclosebrace(char* str)
-{
-    return *str == '}';
-}
+int isclosebrace(char* str) {return *str == '}';}
 
-bool isopenbracket(char* str)
-{
-    return *str == '[';
-}
+int isopenbracket(char* str) {return *str == '[';}
 
-bool isclosebracket(char* str)
-{
-    return *str == ']';
-}
+int isclosebracket(char* str) {return *str == ']';}
