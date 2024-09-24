@@ -4,5 +4,9 @@ piler/
 todo.md
 *.gch
 .vscode/
-parser
-lexer
+asmtest
+asmtest/*
+jupiler
+out
+out.s
+test.c

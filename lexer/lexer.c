@@ -57,7 +57,11 @@ char* next_token(FILE* file) {
         nbChar++;
         found = true;
         ret = fgetpos(file, &last_pos);
-        if(ret < 0) {print_error("fgetpos error");}
+        if(ret < 0) 
+        {
+            print_error("fgetpos error");
+            exit(EXIT_FAILURE);    
+        }
     }
     returned = (char*)malloc(strlen(token) + 1);
     checkNull(returned, "malloc error");
@@ -65,8 +69,11 @@ char* next_token(FILE* file) {
     return returned;
 }
 
-Tokens lex(FILE* file) 
+Error lex(FILE* file) 
 {
+    Error error;
+    error.error_type = ERROR_NONE;
+
     Tokens tokens;
     tokens.nbTokens = 0;
 
@@ -79,22 +86,6 @@ Tokens lex(FILE* file)
         tokens.tokens[tokens.nbTokens] = t;
         tokens.nbTokens++;
     }
-    return tokens;
+    error.tokens = tokens;
+    return error;
 }
-
-// int main(int argc, char *argv[])
-// {
-//     if(argc < 2) 
-//     {print_usage(argv);}
-
-//     FILE* source = fopen(argv[1], "r");
-
-//     Tokens tokens = lex(source);
-
-//     fclose(source);
-
-//     for (int i = 0; i < tokens.nbTokens; i++)
-//     {printf("%s\n", tokens.tokens[i].token);}
-
-//     printf("nb tokens : %d\n", tokens.nbTokens);    
-// }

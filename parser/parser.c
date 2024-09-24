@@ -2,9 +2,11 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
-#include "../lexer/lexer.h"
 #include "parser.h"
+#include "../lexer/lexer.h"
 #include "../utils/utils.h"
+
+exp parse_call(program program, Tokens tokens, int* i, char* prevID);
 
 int numNodes(exp e)
 {
@@ -65,6 +67,22 @@ exp prev_exp(program p)
     return p.expressions[p.nbExp -1];
 }
 
+void add_exp(program* p, exp e, int offset)
+{
+    if(offset == 0)
+    {
+        if(p->expressions == NULL) {p->expressions = (exp*)malloc((p->nbExp + 1)*sizeof(exp));}
+        else {
+            p->expressions = (exp*)realloc(p->expressions, (p->nbExp + 1)*sizeof(exp));
+        }
+        p->expressions[p->nbExp++] = e;
+    }
+    else
+    {
+        p->expressions[p->nbExp + offset] = e;
+    }
+}
+
 exp next_exp(Tokens tokens, int* i)
 {
     if((*i) + 1 >= tokens.nbTokens) return NULL;
@@ -88,6 +106,7 @@ exp next_exp(Tokens tokens, int* i)
     enum reserved reserved = isReserved(token);
     if(reserved != NONE)
     {
+        // TODO : add reserved words handling
         next->type = RESERVED;
         next->u.reserved.reserved = RETURN;
         next->u.reserved.id = token;
@@ -100,116 +119,49 @@ exp next_exp(Tokens tokens, int* i)
         if(operation == OPERATIONS_ADD)
         {
             next->type = ADD;
+            return next;
         }
         else if(operation == OPERATIONS_AFFECT)
         {
             next->type = AFFECT;
+            return next;
         }
-        return next;
     }
 
     next->type = ID;
     next->u.id = token;
+
+    if((*i) - 1 < tokens.nbTokens)
+    {
+        char* prevToken = tokens.tokens[(*i) - 2].token;
+        if(isDatatype(prevToken))
+        {
+            return next;
+        }
+    }
+
+    if((*i) + 1 < tokens.nbTokens)
+    {
+        char* nextToken = tokens.tokens[(*i)].token;
+        if(isopenparenthese(nextToken))
+        {
+            program program;
+            program.nbExp = 0;
+            program.expressions = NULL;
+            exp call = parse_call(program, tokens, i, token);
+            (*i)++;
+            return call;
+        }
+    }
+
     return next;
-}
-
-void add_exp(program* p, exp e, int offset)
-{
-    if(offset == 0)
-    {
-        if(p->expressions == NULL) {p->expressions = (exp*)malloc((p->nbExp + 1)*sizeof(exp));}
-        else {p->expressions = (exp*)realloc(p->expressions, (p->nbExp + 1)*sizeof(exp));}
-        p->expressions[p->nbExp++] = e;
-    }
-    else
-    {
-        p->expressions[p->nbExp + offset] = e;
-    }
-}
-
-void print_exp(exp e) 
-{
-    switch(e->type)
-    {
-        case(AFFECT):
-            print_exp(e->u.affect.e1);
-            printf(" = ");
-            print_exp(e->u.affect.e2);
-            break;
-        case(ADD):
-            print_exp(e->u.add.e1);
-            printf(" + ");
-            print_exp(e->u.add.e2);
-            break;
-        case(INT):
-            printf("%d", e->u.i);
-            break;
-        case(ID):
-            printf("%s", e->u.id);
-            break;
-        case(VARIABLE):
-            switch (e->u.var.dataType)
-            {
-                case DATATYPE_INTEGER:
-                    printf("int %s", e->u.var.id);
-                    break;
-            }
-            break;
-        case(RESERVED):
-            switch(e->u.reserved.reserved)
-            {
-                case(RETURN):
-                    printf("return ");
-                    print_exp(e->u.reserved.e);
-                    break;
-            }
-            break;
-        case(FUNCTION_DEF):
-            printf("%s %s(", e->u.func_def.returnType == 1 ? "int" : "", e->u.func_def.id);
-            for (int i = 0; i < e->u.func_def.params.nbExp; i++)
-            {
-                print_exp(e->u.func_def.params.expressions[i]);
-                if(i + 1 < e->u.func_def.params.nbExp) {printf(", ");}
-            }
-            printf(") {\n");
-            for (int i = 0; i < e->u.func_def.program.nbExp; i++)
-            {
-                printf("    ");
-                print_exp(e->u.func_def.program.expressions[i]);
-                printf(";\n");
-            }
-            printf("}");
-            break;
-        case(FUNCTION_CALL):
-            printf("%s(", e->u.func_call.id);
-            for (int i = 0; i < e->u.func_call.params.nbExp; i++)
-            {
-                print_exp(e->u.func_call.params.expressions[i]);
-                if(i + 1 < e->u.func_call.params.nbExp) {printf(", ");}
-            }
-            printf(")");
-            break;
-        default:
-            printf("not yet implemented exp type printing: %d\n", e->type);
-            break;
-    }
-}
-
-void print_program(program program)
-{
-    printf("----------------\nprinting program\n----------------\n");
-    for (int i = 0; i < program.nbExp; i++)
-    {
-        print_exp(program.expressions[i]);
-        printf("\n");
-    }
-    printf("---------------\nend of printing\n---------------\n");
 }
 
 void handle_exp(program* program, Tokens tokens, int* i, exp e)
 {
     if(e->type == DATATYPE || e->type == INT)
     {
+        
         add_exp(program, e, 0);
         return;
     }
@@ -265,7 +217,6 @@ void handle_exp(program* program, Tokens tokens, int* i, exp e)
         add_exp(program, new, -1);
         return;
     }
-
     add_exp(program, e, 0);
 }
 
@@ -275,9 +226,11 @@ exp parse_call(program program, Tokens tokens, int* i, char* prevID)
     exp call = new_exp();
     call->type = FUNCTION_CALL;
     call->u.func_call.id = prevID;
+    call->u.func_call.params.expressions = NULL;
     call->u.func_call.params.nbExp = 0;
-    char* token = tokens.tokens[*i].token;
+    // char* token = tokens.tokens[*i].token;
     (*i)++;
+    char* token = tokens.tokens[*i].token;
     token = tokens.tokens[*i].token;
     while(!iscloseparenthese(token))
     {
@@ -302,12 +255,13 @@ exp parse_call(program program, Tokens tokens, int* i, char* prevID)
         handle_exp(&call->u.func_call.params, tokens, i, next);
         token = tokens.tokens[*i].token;
     }
-
     return call;
 }
 
-program parse(Tokens tokens)
+Error parse(Tokens tokens)
 {
+    Error error;
+    error.error_type = ERROR_NONE;
     program program;
     program.nbExp = 0;
     int i = 0;
@@ -316,20 +270,19 @@ program parse(Tokens tokens)
     while(i < max)
     {
         char* token = tokens.tokens[i].token;
-        printf("%d: %s\n", i, token);
         if(isopenparenthese(token))
         {
             i++;
             token = tokens.tokens[i].token;
             exp function_exp = new_exp();
             prev = prev_exp(program);
-            printf("%d\n", prev->type);
             if(prev->type == VARIABLE)
             {
                 function_exp->type = FUNCTION_DEF;
                 function_exp->u.func_def.returnType = prev->u.var.dataType;
                 function_exp->u.func_def.id = prev->u.var.id;
                 function_exp->u.func_def.program.nbExp = 0;
+                function_exp->u.func_def.program.expressions = NULL;
                 function_exp->u.func_def.params.nbExp = 0;
                 while(!iscloseparenthese(token))
                 {
@@ -347,14 +300,17 @@ program parse(Tokens tokens)
                 }
                 i++;
                 token = tokens.tokens[i].token;
-                if(!isopenbrace(token)) {print_error("expected function implementation after definition");}
+                if(!isopenbrace(token)) 
+                {
+                    print_error("expected function implementation after definition");
+                    exit(EXIT_FAILURE);    
+                }
                 i++;
                 // function impl
                 while(!isclosebrace(token))
                 {
                     token = tokens.tokens[i].token;
                     prev = prev_exp(function_exp->u.func_def.program);
-                    // printf("token: %s\n", token);
                     
                     if (issemicolon(token))
                     {
@@ -362,6 +318,7 @@ program parse(Tokens tokens)
                         token = tokens.tokens[i].token;
                         continue;
                     }
+                    // handle affect before
                     if(isopenparenthese(token) && prev->type == ID)
                     {
                         exp call = parse_call(program,tokens, &i, prev->u.id);
@@ -398,26 +355,6 @@ program parse(Tokens tokens)
             handle_exp(&program, tokens, &i, e);
         }
     }
-    return program;
-}
-
-int main(int argc, char *argv[])
-{
-    if(argc < 2) 
-    {print_usage(argv);}
-
-    FILE* source = fopen(argv[1], "r");
-    checkNull(source, "fopen error");
-    Tokens tokens = lex(source);
-    printf("Lexing done\n");
-    fclose(source);
-    // for (int i = 0; i < tokens.nbTokens; i++)
-    // {printf("%s\n", tokens.tokens[i].token);}
-    // printf("nb tokens : %d\n", tokens.nbTokens);
-
-    checkValidSource(tokens);
-
-    program program = parse(tokens);
-    printf("Parsing done\n");
-    print_program(program);
+    error.program = program;
+    return error;
 }

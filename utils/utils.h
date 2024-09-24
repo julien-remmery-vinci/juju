@@ -2,19 +2,14 @@
 #define _UTILS_H
 
 #include <stdlib.h>
-
-#define MAX_TOKENS 1000
-
-typedef struct {
-    char* token;
-} Token;
-
-typedef struct {
-    Token tokens[MAX_TOKENS];
-    int nbTokens;
-} Tokens;
+#include "../parser/parser.h"
+#include "../include/tokens.h"
+#include "../include/error.h"
+#include "../include/program.h"
 
 void print_usage(char** argv);
+
+void print_warning(char* message);
 
 void print_error(char* message);
 
@@ -39,5 +34,11 @@ int isopenbracket(char* str);
 int isclosebracket(char* str);
 
 int isnum(char* str);
+
+void checkErrorAndWarnings(Error error);
+
+void print_program(program program);
+
+void print_exp(exp e);
 
 #endif

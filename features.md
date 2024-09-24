@@ -1,0 +1,6 @@
+- "main" function is the entry point of your code
+- variable declaration like "int a = 5;"
+- capable of making additions up to the maximum result of a 32 bit integer
+- capable of making nested additions
+- return exit code statement "return 0;" using the desired exit code at the end of main function
+- if no return statement exists at the end of main function, default exit code 0 is set

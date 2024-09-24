@@ -2,8 +2,8 @@
 #define _LEXER_H
 
 #include <stdio.h>
-#include "../utils/utils.h"
+#include "../include/error.h"
 
-Tokens lex(FILE* file);
+Error lex(FILE* file);
 
 #endif
