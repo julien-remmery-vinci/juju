@@ -41,4 +41,16 @@ void print_program(program program);
 
 void print_exp(exp e);
 
+void free_exp(exp e);
+
+void free_program(program program);
+
+Error new_error();
+
+void free_error(Error* error);
+
+void free_tokens(Tokens tokens);
+
+char* buffer_alloc(int size);
+
 #endif

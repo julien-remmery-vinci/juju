@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <ctype.h>
+#include <string.h>
 #include "utils.h"
 
 #include "../include/program.h"
@@ -28,6 +29,7 @@ void checkNull(void* arg, char* message)
     if(arg == NULL) 
     {
         print_error(message);
+        exit(EXIT_FAILURE);
     }
 }
 
@@ -86,9 +88,9 @@ void checkErrorAndWarnings(Error error)
 void print_program(program program)
 {
     printf("----------------\nprinting program\n----------------\n");
-    for (int i = 0; i < program.nbExp; i++)
+    for (int i = 0; i < program->nbExp; i++)
     {
-        print_exp(program.expressions[i]);
+        print_exp(program->expressions[i]);
         printf("\n");
     }
     printf("---------------\nend of printing\n---------------\n");
@@ -104,7 +106,6 @@ void print_exp(exp e)
             print_exp(e->u.affect.e2);
             break;
         case(ADD):
-            // printf("add: ");
             print_exp(e->u.add.e1);
             printf(" + ");
             print_exp(e->u.add.e2);
@@ -134,26 +135,26 @@ void print_exp(exp e)
             break;
         case(FUNCTION_DEF):
             printf("%s %s(", e->u.func_def.returnType == 1 ? "int" : "", e->u.func_def.id);
-            for (int i = 0; i < e->u.func_def.params.nbExp; i++)
+            for (int i = 0; i < e->u.func_def.params->nbExp; i++)
             {
-                print_exp(e->u.func_def.params.expressions[i]);
-                if(i + 1 < e->u.func_def.params.nbExp) {printf(", ");}
+                print_exp(e->u.func_def.params->expressions[i]);
+                if(i + 1 < e->u.func_def.params->nbExp) {printf(", ");}
             }
             printf(") {\n");
-            for (int i = 0; i < e->u.func_def.program.nbExp; i++)
+            for (int i = 0; i < e->u.func_def.program->nbExp; i++)
             {
                 printf("    ");
-                print_exp(e->u.func_def.program.expressions[i]);
+                print_exp(e->u.func_def.program->expressions[i]);
                 printf(";\n");
             }
             printf("}");
             break;
         case(FUNCTION_CALL):
             printf("%s(", e->u.func_call.id);
-            for (int i = 0; i < e->u.func_call.params.nbExp; i++)
+            for (int i = 0; i < e->u.func_call.params->nbExp; i++)
             {
-                print_exp(e->u.func_call.params.expressions[i]);
-                if(i + 1 < e->u.func_call.params.nbExp) {printf(", ");}
+                print_exp(e->u.func_call.params->expressions[i]);
+                if(i + 1 < e->u.func_call.params->nbExp) {printf(", ");}
             }
             printf(")");
             break;
@@ -169,4 +170,122 @@ void print_exp(exp e)
             printf("not yet implemented exp type printing: %d\n", e->type);
             break;
     }
+}
+
+void free_exp(exp e) {
+    if (e == NULL) return;
+
+    switch (e->type) {
+        case DATATYPE:
+        case INT:
+            break;
+        case ID:
+            free(e->u.id);
+            break;
+        case VARIABLE:
+            free(e->u.var.id);
+            free(e->u.var.reg);
+            break;
+        case ADD:
+            free_exp(e->u.add.e1);
+            free_exp(e->u.add.e2);
+            break;
+        case AFFECT:
+            free_exp(e->u.affect.e1);
+            free_exp(e->u.affect.e2);
+            break;
+        case RESERVED:
+            free(e->u.reserved.id);
+            free_exp(e->u.reserved.e);
+            break;
+        case FUNCTION_DEF:
+            free(e->u.func_def.id);
+            for (int i = 0; i < e->u.func_def.params->nbExp; i++) {
+                free_exp(e->u.func_def.params->expressions[i]);
+            }
+            free(e->u.func_def.params->expressions);
+            free(e->u.func_def.params);
+            for (int i = 0; i < e->u.func_def.program->nbExp; i++) {
+                free_exp(e->u.func_def.program->expressions[i]);
+            }
+            free(e->u.func_def.program->expressions);
+            free(e->u.func_def.program);
+            break;
+        case FUNCTION_CALL:
+            free(e->u.func_call.id);
+            for (int i = 0; i < e->u.func_call.params->nbExp; i++) {
+                free_exp(e->u.func_call.params->expressions[i]);
+            }
+            free(e->u.func_call.params->expressions);
+            break;
+        default:
+            printf("Not yet implemented exp type freeing: %d\n", e->type);
+            break;
+    }
+
+    free(e);
+}
+
+void free_program(program p) {
+    if (p == NULL) return; // Check for NULL pointer
+
+    for (int i = 0; i < p->nbExp; i++) {
+        free_exp(p->expressions[i]);
+    }
+    free(p->expressions); // Free the array of expressions
+    free(p);
+}
+
+Error new_error()
+{
+    Error error;
+    error.error_type = ERROR_NONE;
+    error.warnings.messages = NULL;
+    error.warnings.n = 0;
+    error.errors.messages = NULL;
+    error.errors.n = 0;
+    return error;
+}
+
+void free_error(Error *error) {
+    if (error == NULL) return; // Check for NULL pointer
+
+    // Free warning messages
+    for (int i = 0; i < error->warnings.n; i++) {
+        free(error->warnings.messages[i]);
+    }
+    free(error->warnings.messages);
+
+    // Free error messages
+    for (int i = 0; i < error->errors.n; i++) {
+        free(error->errors.messages[i]);
+    }
+    free(error->errors.messages);
+}
+
+
+void free_tokens(Tokens tokens)
+{
+    for (int i = 0; i < tokens.nbTokens; i++)
+    {
+        if(tokens.tokens[i].token != NULL) 
+        {
+            free(tokens.tokens[i].token);
+            tokens.tokens[i].token = 0;
+        }
+    }
+    // TODO : uncomment when tokens array will be alloced dynamically
+    // free(tokens.tokens);
+}
+
+char* buffer_alloc(int size)
+{
+    char* buff = malloc(size*sizeof(char));
+    if(buff == NULL) 
+    {
+        print_error("malloc error");
+        exit(EXIT_FAILURE);
+    }
+    memset(buff, 0, size);
+    return buff;
 }

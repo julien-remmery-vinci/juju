@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include "../include/error.h"
 
+Tokens new_tokens();
+
+char* next_token(FILE* file);
+
 Error lex(FILE* file);
 
 #endif

@@ -3,10 +3,12 @@
 
 #include "expressions.h"
 
-typedef struct{
+typedef struct program* program;
+
+struct program{
     exp* expressions;
     int nbExp;
-} program;
+};
 
 struct exp {
     enum expType type;

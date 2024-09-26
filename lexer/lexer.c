@@ -5,27 +5,33 @@
 #include "lexer.h"
 #include "../utils/utils.h"
 
+Tokens new_tokens() 
+{
+    Tokens tokens;
+    tokens.nbTokens = 0;
+    return tokens;
+}
+
 char* next_token(FILE* file) {
-    bool found = false;
-    char token[MAX_TOKENS] = {'\0'};
-    memset(token, 0, MAX_TOKENS);
-    int nbChar = 0;
+    char* token = NULL;
     fpos_t last_pos;
-    int ret;
-    char* returned;
+    int ret = 0;
+
     while(!feof(file))
     {
         char c = getc(file);
         // not in switch for break use
         if(c == ' ') 
         {
-            if(found) {break;}
+            if(token != NULL) {break;}
             continue;
         }
         switch(c)
         {
-            case(-1): return "";
-            case('\n'): return "";
+            case(-1):
+            case('\n'):
+                free(token); 
+                return "";
             case('('):
             case(')'):
             case('{'):
@@ -38,24 +44,23 @@ char* next_token(FILE* file) {
             case('*'):
             case('/'):
             case('^'):
-                if(found) 
+                // if token is not empty, we need to go back one char
+                if(token != NULL) 
                 {
                     ret = fsetpos(file, &last_pos);
                     if(ret < 0) {print_error("fsetpos error");}
-                    returned = (char*)malloc(strlen(token) + 1);
-                    checkNull(returned, "malloc error");
-                    strcpy(returned, token);
-                    return returned;
+                    return token;
                 }
-                char* r = malloc(2);
-                checkNull(r, "malloc error");
-                r[0] = c;
-                r[1] = '\0';
-                return r;
+                token = buffer_alloc(2);
+                strncat(token, &c, 1);
+                return token;
         }
-        token[nbChar] = c;
-        nbChar++;
-        found = true;
+
+        if(token == NULL){token = buffer_alloc(2);}
+        else {token = (char*)realloc(token, strlen(token) + 2);}
+
+        strncat(token, &c, 1);
+
         ret = fgetpos(file, &last_pos);
         if(ret < 0) 
         {
@@ -63,26 +68,23 @@ char* next_token(FILE* file) {
             exit(EXIT_FAILURE);    
         }
     }
-    returned = (char*)malloc(strlen(token) + 1);
-    checkNull(returned, "malloc error");
-    strcpy(returned, token);
-    return returned;
+    return token;
 }
 
 Error lex(FILE* file) 
 {
-    Error error;
-    error.error_type = ERROR_NONE;
+    Error error = new_error();
 
-    Tokens tokens;
-    tokens.nbTokens = 0;
+    Tokens tokens = new_tokens();
 
     while(!feof(file)) 
     {
         char* token = next_token(file);
         if(strcmp(token, "") == 0) {continue;}
         Token t;
-        t.token = token;
+        t.token = buffer_alloc(strlen(token) + 1);
+        strcpy(t.token, token);
+        free(token);
         tokens.tokens[tokens.nbTokens] = t;
         tokens.nbTokens++;
     }

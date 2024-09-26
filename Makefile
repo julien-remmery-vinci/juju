@@ -1,5 +1,12 @@
+run: jupiler
+	./jupiler test.ju
+	gcc -g -o out out.s
+
 test: jupiler
 	./jupiler test.ju
+
+debug: jupiler
+	gdb ./jupiler
 
 jupiler: compiler.o parser.o lexer.o utils.o codegen.o
 	gcc -g -o jupiler compiler.o parser.o lexer.o utils.o codegen.o
@@ -19,9 +26,11 @@ lexer.o: lexer/lexer.c lexer/lexer.h
 utils.o: utils/utils.c utils/utils.h
 	gcc -g -c utils/utils.c
 
-run: jupiler
-	./jupiler test.ju
-	gcc -g -o out out.s
+valgrind: jupiler
+	valgrind ./jupiler test.ju
+
+valgrindfull: jupiler
+	valgrind --leak-check=full --show-leak-kinds=all ./jupiler test.ju
 
 clean:
 	rm -f *.o *.s jupiler out

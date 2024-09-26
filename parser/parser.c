@@ -6,7 +6,16 @@
 #include "../lexer/lexer.h"
 #include "../utils/utils.h"
 
-exp parse_call(program program, Tokens tokens, int* i, char* prevID);
+program new_program() {
+    program p = malloc(sizeof(*p));
+    if (p == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(1);
+    }
+    p->expressions = NULL;
+    p->nbExp = 0;
+    return p;
+}
 
 int numNodes(exp e)
 {
@@ -63,11 +72,11 @@ exp new_exp()
 
 exp prev_exp(program p)
 {
-    if(p.nbExp == 0) return NULL;
-    return p.expressions[p.nbExp -1];
+    if(p->nbExp == 0) return NULL;
+    return p->expressions[p->nbExp -1];
 }
 
-void add_exp(program* p, exp e, int offset)
+void add_exp(program p, exp e, int offset)
 {
     if(offset == 0)
     {
@@ -75,7 +84,12 @@ void add_exp(program* p, exp e, int offset)
         else {
             p->expressions = (exp*)realloc(p->expressions, (p->nbExp + 1)*sizeof(exp));
         }
-        p->expressions[p->nbExp++] = e;
+        if (p->expressions == NULL) {
+            print_error("error while allocating memory");
+            exit(EXIT_FAILURE);
+        }
+        p->expressions[p->nbExp] = e;
+        p->nbExp++;
     }
     else
     {
@@ -109,7 +123,8 @@ exp next_exp(Tokens tokens, int* i)
         // TODO : add reserved words handling
         next->type = RESERVED;
         next->u.reserved.reserved = RETURN;
-        next->u.reserved.id = token;
+        next->u.reserved.id = buffer_alloc(strlen(token) + 1);
+        strncpy(next->u.reserved.id, token, strlen(token));
         return next;
     }
 
@@ -129,7 +144,8 @@ exp next_exp(Tokens tokens, int* i)
     }
 
     next->type = ID;
-    next->u.id = token;
+    next->u.id = buffer_alloc(strlen(token) + 1);
+    strncpy(next->u.id, token, strlen(token));
 
     if((*i) - 1 < tokens.nbTokens)
     {
@@ -145,11 +161,10 @@ exp next_exp(Tokens tokens, int* i)
         char* nextToken = tokens.tokens[(*i)].token;
         if(isopenparenthese(nextToken))
         {
-            program program;
-            program.nbExp = 0;
-            program.expressions = NULL;
+            program program = new_program();
             exp call = parse_call(program, tokens, i, token);
             (*i)++;
+            free_exp(next);
             return call;
         }
     }
@@ -157,11 +172,10 @@ exp next_exp(Tokens tokens, int* i)
     return next;
 }
 
-void handle_exp(program* program, Tokens tokens, int* i, exp e)
+void handle_exp(program program, Tokens tokens, int* i, exp e)
 {
     if(e->type == DATATYPE || e->type == INT)
     {
-        
         add_exp(program, e, 0);
         return;
     }
@@ -176,7 +190,7 @@ void handle_exp(program* program, Tokens tokens, int* i, exp e)
         }
     }
 
-    exp prev = prev_exp(*program);
+    exp prev = prev_exp(program);
     if(e->type == ADD)
     {
         if(prev->type == AFFECT)
@@ -208,12 +222,16 @@ void handle_exp(program* program, Tokens tokens, int* i, exp e)
         return;
     }
 
-    if(prev != NULL && e->type == ID && (*program).nbExp > 0 && prev->type == DATATYPE)
+    if(prev != NULL && e->type == ID && program->nbExp > 0 && prev->type == DATATYPE)
     {
         exp new = new_exp();
         new->type = VARIABLE;
         new->u.var.dataType = prev->u.dataType;
-        new->u.var.id = e->u.id;
+        new->u.var.id = buffer_alloc(strlen(e->u.id) + 1);
+        strncpy(new->u.var.id, e->u.id, strlen(e->u.id));
+        new->u.var.reg = NULL;
+        free_exp(prev);
+        free_exp(e);
         add_exp(program, new, -1);
         return;
     }
@@ -225,23 +243,22 @@ exp parse_call(program program, Tokens tokens, int* i, char* prevID)
     exp prev;
     exp call = new_exp();
     call->type = FUNCTION_CALL;
-    call->u.func_call.id = prevID;
-    call->u.func_call.params.expressions = NULL;
-    call->u.func_call.params.nbExp = 0;
-    // char* token = tokens.tokens[*i].token;
+    call->u.func_call.id = buffer_alloc(strlen(prevID) + 1);
+    strncpy(call->u.func_call.id, prevID, strlen(prevID));
+    call->u.func_call.params->expressions = NULL;
+    call->u.func_call.params->nbExp = 0;
     (*i)++;
     char* token = tokens.tokens[*i].token;
-    token = tokens.tokens[*i].token;
     while(!iscloseparenthese(token))
     {
         prev = prev_exp(call->u.func_call.params);
-        // checkNull(prev, "error null previous exp");
         if(isopenparenthese(token) && prev->type == ID)
         {
             exp new_call = parse_call(program, tokens, i, prev->u.id);
-            add_exp(&call->u.func_call.params, new_call, -1);
+            add_exp(call->u.func_call.params, new_call, -1);
             (*i)++;
             token = tokens.tokens[*i].token;
+            free_exp(prev);
             continue;
         }
         if(iscomma(token))
@@ -252,18 +269,17 @@ exp parse_call(program program, Tokens tokens, int* i, char* prevID)
         }
         exp next = next_exp(tokens, i);
         if(next == NULL) break;
-        handle_exp(&call->u.func_call.params, tokens, i, next);
+        handle_exp(call->u.func_call.params, tokens, i, next);
         token = tokens.tokens[*i].token;
     }
+    free_exp(prev);
     return call;
 }
 
 Error parse(Tokens tokens)
 {
-    Error error;
-    error.error_type = ERROR_NONE;
-    program program;
-    program.nbExp = 0;
+    Error error = new_error();
+    program program = new_program();
     int i = 0;
     int max = tokens.nbTokens;
     exp e, prev;
@@ -280,10 +296,13 @@ Error parse(Tokens tokens)
             {
                 function_exp->type = FUNCTION_DEF;
                 function_exp->u.func_def.returnType = prev->u.var.dataType;
-                function_exp->u.func_def.id = prev->u.var.id;
-                function_exp->u.func_def.program.nbExp = 0;
-                function_exp->u.func_def.program.expressions = NULL;
-                function_exp->u.func_def.params.nbExp = 0;
+                function_exp->u.func_def.id = buffer_alloc(strlen(prev->u.var.id) + 1);
+                strncpy(function_exp->u.func_def.id, prev->u.var.id, strlen(prev->u.var.id));
+                function_exp->u.func_def.program = new_program();
+                function_exp->u.func_def.params = new_program();
+                function_exp->u.func_def.params->expressions = NULL;
+                function_exp->u.func_def.params->nbExp = 0;
+                free_exp(prev);
                 while(!iscloseparenthese(token))
                 {
                     if(iscomma(token))
@@ -295,7 +314,7 @@ Error parse(Tokens tokens)
                     // handle function params -> store params
                     exp e = next_exp(tokens, &i);
                     if(e == NULL) break;
-                    handle_exp(&function_exp->u.func_def.params, tokens, &i, e);
+                    handle_exp(function_exp->u.func_def.params, tokens, &i, e);
                     token = tokens.tokens[i].token;
                 }
                 i++;
@@ -322,9 +341,10 @@ Error parse(Tokens tokens)
                     if(isopenparenthese(token) && prev->type == ID)
                     {
                         exp call = parse_call(program,tokens, &i, prev->u.id);
-                        add_exp(&function_exp->u.func_def.program, call, -1);
+                        add_exp(function_exp->u.func_def.program, call, -1);
                         i++;
                         token = tokens.tokens[i].token;
+                        free_exp(prev);
                         continue;
                     }
                     if(prev != NULL && prev->type == RESERVED)
@@ -341,18 +361,18 @@ Error parse(Tokens tokens)
 
                     e = next_exp(tokens, &i);
                     if(e == NULL) break;
-                    handle_exp(&function_exp->u.func_def.program, tokens, &i, e);
+                    handle_exp(function_exp->u.func_def.program, tokens, &i, e);
                 }
                 i++;
             }
 
-            add_exp(&program, function_exp, -1);
+            add_exp(program, function_exp, -1);
         }
         else
         {
             e = next_exp(tokens, &i);
             if(e == NULL) break;
-            handle_exp(&program, tokens, &i, e);
+            handle_exp(program, tokens, &i, e);
         }
     }
     error.program = program;
