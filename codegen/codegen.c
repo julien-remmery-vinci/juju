@@ -15,7 +15,7 @@ char* func_def_code(exp e)
 {
     int n_locals = 0;
     char* code = buffer_alloc(DEFAULT_BUFFER_SIZE);
-    char* buffer;
+    char* buffer = NULL;
     code[0] = '\0';
     sprintf(code, "%s:\n", e->u.func_def.id);
     strcat(code, "\tpushq %rbp\n");
@@ -43,6 +43,7 @@ char* func_def_code(exp e)
             buffer = return_code(e->u.func_def.program->expressions[i]);
             strncat(code, buffer, strlen(buffer));
         }
+        if(buffer != NULL) free(buffer);
     }
     if (!has_return && strcmp(e->u.func_def.id, "main") == 0)
     {
@@ -50,8 +51,6 @@ char* func_def_code(exp e)
     }
     strcat(code, "\tpopq %rbp\n");
     strcat(code, "\tret\n");
-
-    free(buffer);
     
     return code;
 }
@@ -103,12 +102,12 @@ char* var_declaration_code(exp e, int* n_locals)
 
 char* add_code(exp e1, exp e2) {
     char* code = buffer_alloc(DEFAULT_BUFFER_SIZE);
-    char* reg = buffer_alloc(DEFAULT_BUFFER_SIZE);
-    char* reg1 = buffer_alloc(DEFAULT_BUFFER_SIZE);
-    char* reg2 = buffer_alloc(DEFAULT_BUFFER_SIZE);
-    char* addcode = buffer_alloc(DEFAULT_BUFFER_SIZE);
-    char* addcode1 = buffer_alloc(DEFAULT_BUFFER_SIZE);
-    char* addcode2 = buffer_alloc(DEFAULT_BUFFER_SIZE);
+    char* reg = NULL;
+    char* reg1 = NULL;
+    char* reg2 = NULL;
+    char* addcode = NULL;
+    char* addcode1 = NULL;
+    char* addcode2 = NULL;
 
     if (e1->type == INT && e2->type == INT) {
         sprintf(code, "\tmovl $%d, %%eax\n\taddl $%d, %%eax\n", e1->u.i, e2->u.i);
@@ -155,7 +154,7 @@ char* add_code(exp e1, exp e2) {
 char* affect_code(exp e, int* n_locals)
 {
     char* code = malloc(1000*sizeof(char));
-    char* buffer;
+    char* buffer = NULL;
     code[0] = '\0';
     if(e->u.affect.e2->type == FUNCTION_CALL)
     {
@@ -197,7 +196,7 @@ char* affect_code(exp e, int* n_locals)
         stored_exps_index++;
     }
 
-    // free(buffer);
+    if(buffer != NULL) free(buffer);
 
     return code;
 }
@@ -205,7 +204,7 @@ char* affect_code(exp e, int* n_locals)
 char* return_code(exp e)
 {
     char* code = buffer_alloc(DEFAULT_BUFFER_SIZE);
-    char* buffer;
+    char* buffer = NULL;
     code[0] = '\0';
     if(e->u.reserved.e->type == ADD) 
     {
@@ -229,7 +228,7 @@ char* return_code(exp e)
         sprintf(code, "\tmovl $%d, %%eax\n", e->u.reserved.e->u.i);
     }
 
-    free(buffer);
+    if(buffer != NULL) free(buffer);
 
     return code;
 }
@@ -250,7 +249,7 @@ void codegen(program program)
 {
     FILE* output = fopen("out.s", "w");
     checkNull(output, "fopen error");
-    char* buffer;
+    char* buffer = NULL;
 
     fprintf(output, ".text\n.globl main\n\n");
     for (int i = 0; i < program->nbExp; i++)
@@ -260,10 +259,9 @@ void codegen(program program)
         {
             buffer = func_def_code(e);
             fprintf(output, "%s", buffer);
-            memset(buffer, 0, strlen(buffer));
+            if(buffer != NULL) free(buffer);
         }
     }
 
     fclose(output);
-    free(buffer);
 }
