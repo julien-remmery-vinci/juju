@@ -21,6 +21,7 @@ enum expType {
     INT,
     ID,
     ADD,
+    OPERATION,
     AFFECT,
     DATATYPE,
     VARIABLE,
@@ -30,9 +31,12 @@ enum expType {
     RESERVED
 };
 
-enum operations {
+enum operation {
     OPERATIONS_NONE,
     OPERATIONS_ADD,
+    OPERATIONS_SUBSTRACT,
+    OPERATIONS_MULTIPLY,
+    OPERATIONS_DIVIDE,
     OPERATIONS_AFFECT
     // add missing operators -> implement too
 };

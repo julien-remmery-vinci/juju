@@ -3,12 +3,16 @@
 
 #include "../include/program.h"
 
+#define MAX_REGISTER_SIZE 20
+#define DEFAULT_BUFFER_SIZE 1000
+
+char* get_exp_code(exp e);
 char* func_def_code(exp e);
 char* func_call_code(exp e);
-char* add_code(exp e1, exp e2);
+char* operation_code(exp e);
 char* get_register(exp e);
 void replace_register(exp e, char* reg);
-char* var_declaration_code(exp e, int* n_locals);
+void var_declaration(exp e, int* n_locals);
 char* affect_code(exp e, int* n_locals);
 char* return_code(exp e);
 void add_default_return(char** code);

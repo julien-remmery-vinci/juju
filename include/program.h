@@ -19,6 +19,7 @@ struct exp {
         struct {enum reserved reserved; char* id; exp e;} reserved;
         struct {enum dataType dataType; char* id; char* reg;} var;
         struct {exp e1; exp e2;} add;
+        struct {enum operation operation; exp e1; exp e2;} operation;
         struct {exp e1; exp e2;} affect;
         struct {program program; program params; enum dataType returnType; char* id;} func_def;
         struct {program params; char* id;} func_call;

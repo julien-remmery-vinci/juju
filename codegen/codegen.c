@@ -4,15 +4,12 @@
 #include "codegen.h"
 #include "../utils/utils.h"
 
-#define MAX_REGISTER_SIZE 20
-#define DEFAULT_BUFFER_SIZE 1000
-
-int has_return = 0;
 exp stored_exps[1000];
 int stored_exps_index = 0;
 
 char* func_def_code(exp e)
 {
+    int has_return = 0;
     int n_locals = 0;
     char* code = buffer_alloc(DEFAULT_BUFFER_SIZE);
     char* buffer = NULL;
@@ -24,8 +21,7 @@ char* func_def_code(exp e)
     {
         if(e->u.func_def.program->expressions[i]->type == VARIABLE)
         {
-            buffer = var_declaration_code(e->u.func_def.program->expressions[i], &n_locals);
-            strncat(code, buffer, strlen(buffer));
+            var_declaration(e->u.func_def.program->expressions[i], &n_locals);
         }
         if(e->u.func_def.program->expressions[i]->type == FUNCTION_CALL)
         {
@@ -88,65 +84,90 @@ void replace_register(exp e, char* reg)
     }
 }
 
-char* var_declaration_code(exp e, int* n_locals)
+void var_declaration(exp e, int* n_locals)
 {
-    char* code = buffer_alloc(DEFAULT_BUFFER_SIZE);
-    code[0] = '\0';
     (*n_locals)++;
     e->u.var.reg = buffer_alloc(MAX_REGISTER_SIZE);
     sprintf(e->u.var.reg, "-%d(%%rbp)", 4*(*n_locals));
     stored_exps[stored_exps_index] = e;
     stored_exps_index++;
-    return code;
 }
 
-char* add_code(exp e1, exp e2) {
+char* get_operation_instruction(exp e)
+{
+    char* instruction;
+    switch (e->u.operation.operation)
+    {
+    case OPERATIONS_ADD:
+        instruction = "addl";
+        break;
+    case OPERATIONS_SUBSTRACT:
+        instruction = "subl";
+        break;
+    case OPERATIONS_MULTIPLY:
+        instruction = "imull";
+        break;
+    case OPERATIONS_DIVIDE:
+        instruction = "idivl";
+        break;
+    default:
+        break;
+    }
+    return instruction;
+}
+
+char* operation_code(exp e) {
     char* code = buffer_alloc(DEFAULT_BUFFER_SIZE);
+    char* instruction = get_operation_instruction(e);
+
     char* reg = NULL;
     char* reg1 = NULL;
     char* reg2 = NULL;
-    char* addcode = NULL;
-    char* addcode1 = NULL;
-    char* addcode2 = NULL;
+    char* op_code = NULL;
+    char* op_code1 = NULL;
+    char* op_code2 = NULL;
+
+    exp e1 = e->u.operation.e1;
+    exp e2 = e->u.operation.e2;
 
     if (e1->type == INT && e2->type == INT) {
-        sprintf(code, "\tmovl $%d, %%eax\n\taddl $%d, %%eax\n", e1->u.i, e2->u.i);
-    } else if (e1->type == ID && e2->type == ADD) {
+        sprintf(code, "\tmovl $%d, %%eax\n\t%s $%d, %%eax\n", e1->u.i, instruction, e2->u.i);
+    } else if (e1->type == ID && e2->type == OPERATION) {
         reg = get_register(e1);
-        addcode = add_code(e2->u.add.e1, e2->u.add.e2);
-        sprintf(code, "%s\taddl %s, %%eax\n", addcode, reg);
+        op_code = operation_code(e2);
+        sprintf(code, "%s\t%s %s, %%eax\n", op_code, instruction, reg);
     } else if (e1->type == ADD && e2->type == ID) {
         reg = get_register(e2);
-        addcode = add_code(e1->u.add.e1, e1->u.add.e2);
-        sprintf(code, "%s\taddl %s, %%eax\n", addcode, reg);
-    } else if (e1->type == ADD && e2->type == INT) {
-        addcode = add_code(e1->u.add.e1, e1->u.add.e2);
-        sprintf(code, "%s\taddl $%d, %%eax\n", addcode, e2->u.i);
-    } else if (e1->type == INT && e2->type == ADD) {
-        addcode = add_code(e2->u.add.e1, e2->u.add.e2);
-        sprintf(code, "%s\taddl $%d, %%eax\n", addcode, e1->u.i);
-    } else if (e1->type == ADD && e2->type == ADD) {
-        addcode1 = add_code(e1->u.add.e1, e1->u.add.e2);
-        addcode2 = add_code(e2->u.add.e1, e2->u.add.e2);
-        sprintf(code, "%s%s\taddl %%eax, %%ebx\n", addcode1, addcode2);
+        op_code = operation_code(e1);
+        sprintf(code, "%s\t%s %s, %%eax\n", op_code, instruction, reg);
+    } else if (e1->type == OPERATION && e2->type == INT) {
+        op_code = operation_code(e1);
+        sprintf(code, "%s\t%s $%d, %%eax\n", op_code, instruction, e2->u.i);
+    } else if (e1->type == INT && e2->type == OPERATION) {
+        op_code = operation_code(e2);
+        sprintf(code, "%s\t%s $%d, %%eax\n", op_code, instruction, e1->u.i);
+    } else if (e1->type == OPERATION && e2->type == OPERATION) {
+        op_code1 = operation_code(e1);
+        op_code2 = operation_code(e2);
+        sprintf(code, "%s%s\t%s %%eax, %%ebx\n", op_code1, op_code2, instruction);
     } else if (e1->type == ID && e2->type == ID) {
         reg1 = get_register(e1);
         reg2 = get_register(e2);
-        sprintf(code, "\tmovl %s, %%eax\n\taddl %s, %%eax\n", reg1, reg2);
+        sprintf(code, "\tmovl %s, %%eax\n\t%s %s, %%eax\n", reg1, instruction, reg2);
     } else if (e1->type == ID && e2->type == INT) {
         reg = get_register(e1);
-        sprintf(code, "\tmovl %s, %%eax\n\taddl $%d, %%eax\n", reg, e2->u.i);
+        sprintf(code, "\tmovl %s, %%eax\n\t%s $%d, %%eax\n", reg, instruction, e2->u.i);
     } else if (e1->type == INT && e2->type == ID) {
         reg = get_register(e2);
-        sprintf(code, "\tmovl $%d, %%eax\n\taddl %s, %%eax\n", e1->u.i, reg);
+        sprintf(code, "\tmovl $%d, %%eax\n\t%s %s, %%eax\n", e1->u.i, instruction, reg);
     }
 
     if(reg != NULL) free(reg);
     if (reg1 != NULL) free(reg1);
     if (reg2 != NULL) free(reg2);
-    if (addcode != NULL) free(addcode);
-    if (addcode1 != NULL) free(addcode1);
-    if (addcode2 != NULL) free(addcode2); 
+    if (op_code != NULL) free(op_code);
+    if (op_code1 != NULL) free(op_code1);
+    if (op_code2 != NULL) free(op_code2); 
 
     return code;
 }
@@ -166,10 +187,10 @@ char* affect_code(exp e, int* n_locals)
         stored_exps[stored_exps_index] = e->u.affect.e1;
         stored_exps_index++;
     }
-    else if(e->u.affect.e2->type == ADD)
+    else if(e->u.affect.e2->type == OPERATION)
     {
         (*n_locals)++;
-        buffer = add_code(e->u.affect.e2->u.add.e1, e->u.affect.e2->u.add.e2);
+        buffer = operation_code(e->u.affect.e2);
         sprintf(code, "%s\tmovl %%eax, -%d(%%rbp)\n", buffer, 4*(*n_locals));
         e->u.affect.e1->u.var.reg = buffer_alloc(MAX_REGISTER_SIZE);
         sprintf(e->u.affect.e1->u.var.reg, "-%d(%%rbp)", 4*(*n_locals));
@@ -206,9 +227,9 @@ char* return_code(exp e)
     char* code = buffer_alloc(DEFAULT_BUFFER_SIZE);
     char* buffer = NULL;
     code[0] = '\0';
-    if(e->u.reserved.e->type == ADD) 
+    if(e->u.reserved.e->type == OPERATION) 
     {
-        buffer = add_code(e->u.reserved.e->u.add.e1, e->u.reserved.e->u.add.e2);
+        buffer = operation_code(e->u.reserved.e);
         sprintf(code, "%s", buffer);
     }
     else if(e->u.reserved.e->type == ID)
@@ -245,6 +266,41 @@ char* builtin_print_code(exp e)
     return code;
 }
 
+char* get_exp_code(exp e)
+{
+    char* code = buffer_alloc(DEFAULT_BUFFER_SIZE);
+    code[0] = '\0';
+    char* buffer = NULL;
+    switch(e->type)
+    {
+        case FUNCTION_DEF:
+            buffer = func_def_code(e);
+            strncpy(code, buffer, strlen(buffer));
+            break;
+        case FUNCTION_CALL:
+            buffer = func_call_code(e);
+            strncpy(code, buffer, strlen(buffer));
+            break;
+        case OPERATION:
+            buffer = operation_code(e);
+            strncpy(code, buffer, strlen(buffer));
+            break;
+        case AFFECT:
+            buffer = affect_code(e, 0);
+            strncpy(code, buffer, strlen(buffer));
+            break;
+        case RESERVED:
+            if(e->u.reserved.reserved == RETURN)
+            {
+                buffer = return_code(e);
+                strncpy(code, buffer, strlen(buffer));
+            }
+            break;
+    }
+    if(buffer != NULL) free(buffer);
+    return code;
+}
+
 void codegen(program program)
 {
     FILE* output = fopen("out.s", "w");
@@ -255,12 +311,9 @@ void codegen(program program)
     for (int i = 0; i < program->nbExp; i++)
     {
         exp e = program->expressions[i];
-        if(e->type == FUNCTION_DEF)
-        {
-            buffer = func_def_code(e);
-            fprintf(output, "%s", buffer);
-            if(buffer != NULL) free(buffer);
-        }
+        buffer = get_exp_code(e);
+        fprintf(output, "%s\n", buffer);
+        free(buffer);
     }
 
     fclose(output);

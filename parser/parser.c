@@ -50,13 +50,19 @@ enum reserved isReserved(char* str)
     return r;
 }
 
-enum operations isoperator(char* str)
+enum operation isoperator(char* str)
 {
-    enum operations o = OPERATIONS_NONE;
+    enum operation o = OPERATIONS_NONE;
     switch(str[0])
     {
         case('+'):
             return (o = OPERATIONS_ADD);
+        case('-'):
+            return (o = OPERATIONS_SUBSTRACT);
+        case('*'):
+            return (o = OPERATIONS_MULTIPLY);
+        case('/'):
+            return (o = OPERATIONS_DIVIDE);
         case('='):
             return (o = OPERATIONS_AFFECT);
         default:
@@ -128,19 +134,19 @@ exp next_exp(Tokens tokens, int* i)
         return next;
     }
 
-    enum operations operation = isoperator(token);
+    enum operation operation = isoperator(token);
     if(operation != OPERATIONS_NONE)
     {
-        if(operation == OPERATIONS_ADD)
-        {
-            next->type = ADD;
-            return next;
-        }
-        else if(operation == OPERATIONS_AFFECT)
+        if(operation == OPERATIONS_AFFECT)
         {
             next->type = AFFECT;
-            return next;
         }
+        else
+        {
+            next->type = OPERATION;
+            next->u.operation.operation = operation;
+        }
+        return next;
     }
 
     next->type = ID;
@@ -191,29 +197,28 @@ void handle_exp(program program, Tokens tokens, int* i, exp e)
     }
 
     exp prev = prev_exp(program);
-    if(e->type == ADD)
+    if(e->type == OPERATION)
     {
         if(prev->type == AFFECT)
         {
-            e->u.add.e1 = prev->u.affect.e2;
-            e->u.add.e2 = next_exp(tokens, i);
+            e->u.operation.e1 = prev->u.affect.e2;
+            e->u.operation.e2 = next_exp(tokens, i);
             prev->u.affect.e2 = e;
         }
         else if(prev->type == RESERVED && prev->u.reserved.reserved == RETURN)
         {
-            e->u.add.e1 = prev->u.reserved.e;
-            e->u.add.e2 = next_exp(tokens, i);
+            e->u.operation.e1 = prev->u.reserved.e;
+            e->u.operation.e2 = next_exp(tokens, i);
             prev->u.reserved.e = e;
         }
         else
         {
-            e->u.add.e1 = prev;
-            e->u.add.e2 = next_exp(tokens, i);
+            e->u.operation.e1 = prev;
+            e->u.operation.e2 = next_exp(tokens, i);
             add_exp(program, e, -1);
         }
         return;
     }
-
     if(e->type == AFFECT)
     {
         e->u.affect.e1 = prev;

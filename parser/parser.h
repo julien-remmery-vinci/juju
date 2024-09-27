@@ -10,7 +10,7 @@ program new_program();
 int numNodes(exp e);
 enum dataType isDatatype(char* str);
 enum reserved isReserved(char* str);
-enum operations isoperator(char* str);
+enum operation isoperator(char* str);
 exp new_exp();
 exp prev_exp(program p);
 void add_exp(program p, exp e, int offset);

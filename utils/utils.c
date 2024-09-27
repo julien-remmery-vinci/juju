@@ -105,10 +105,24 @@ void print_exp(exp e)
             printf(" = ");
             print_exp(e->u.affect.e2);
             break;
-        case(ADD):
-            print_exp(e->u.add.e1);
-            printf(" + ");
-            print_exp(e->u.add.e2);
+        case(OPERATION):
+            print_exp(e->u.operation.e1);
+            switch(e->u.operation.operation)
+            {
+                case OPERATIONS_ADD:
+                    printf(" + ");
+                    break;
+                case OPERATIONS_SUBSTRACT:
+                    printf(" - ");
+                    break;
+                case OPERATIONS_MULTIPLY:
+                    printf(" * ");
+                    break;
+                case OPERATIONS_DIVIDE:
+                    printf(" / ");
+                    break;
+            }
+            print_exp(e->u.operation.e2);
             break;
         case(INT):
             printf("%d", e->u.i);
@@ -187,8 +201,13 @@ void free_exp(exp e) {
             free(e->u.var.reg);
             break;
         case ADD:
+            // REFACTOR TO OPERATION EXP
             free_exp(e->u.add.e1);
             free_exp(e->u.add.e2);
+            break;
+        case OPERATION:
+            free_exp(e->u.operation.e1);
+            free_exp(e->u.operation.e2);
             break;
         case AFFECT:
             free_exp(e->u.affect.e1);
