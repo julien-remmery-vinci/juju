@@ -17,6 +17,7 @@ program new_program() {
     return p;
 }
 
+// Deprecated
 int numNodes(exp e)
 {
     switch(e->type)
@@ -137,6 +138,7 @@ exp next_exp(Tokens tokens, int* i)
     enum operation operation = isoperator(token);
     if(operation != OPERATIONS_NONE)
     {
+        // TODO : REFACTOR
         if(operation == OPERATIONS_AFFECT)
         {
             next->type = AFFECT;
@@ -245,13 +247,12 @@ void handle_exp(program program, Tokens tokens, int* i, exp e)
 
 exp parse_call(program program, Tokens tokens, int* i, char* prevID)
 {
-    exp prev;
+    exp prev = NULL;
     exp call = new_exp();
     call->type = FUNCTION_CALL;
     call->u.func_call.id = buffer_alloc(strlen(prevID) + 1);
     strncpy(call->u.func_call.id, prevID, strlen(prevID));
-    call->u.func_call.params->expressions = NULL;
-    call->u.func_call.params->nbExp = 0;
+    call->u.func_call.params = new_program();
     (*i)++;
     char* token = tokens.tokens[*i].token;
     while(!iscloseparenthese(token))
@@ -272,12 +273,11 @@ exp parse_call(program program, Tokens tokens, int* i, char* prevID)
             token = tokens.tokens[*i].token;
             continue;
         }
-        exp next = next_exp(tokens, i);
-        if(next == NULL) break;
-        handle_exp(call->u.func_call.params, tokens, i, next);
-        token = tokens.tokens[*i].token;
+            exp next = next_exp(tokens, i);
+            if(next == NULL) break;
+            handle_exp(call->u.func_call.params, tokens, i, next);
+            token = tokens.tokens[*i].token;
     }
-    free_exp(prev);
     return call;
 }
 
@@ -305,8 +305,6 @@ Error parse(Tokens tokens)
                 strncpy(function_exp->u.func_def.id, prev->u.var.id, strlen(prev->u.var.id));
                 function_exp->u.func_def.program = new_program();
                 function_exp->u.func_def.params = new_program();
-                function_exp->u.func_def.params->expressions = NULL;
-                function_exp->u.func_def.params->nbExp = 0;
                 free_exp(prev);
                 while(!iscloseparenthese(token))
                 {

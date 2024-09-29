@@ -6,7 +6,8 @@
 #define MAX_REGISTER_SIZE 20
 #define DEFAULT_BUFFER_SIZE 1000
 
-char* get_exp_code(exp e);
+int get_stack_size(program program);
+char* get_exp_code(exp e, int* n_locals);
 char* func_def_code(exp e);
 char* func_call_code(exp e);
 char* operation_code(exp e);
