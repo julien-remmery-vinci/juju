@@ -5,7 +5,8 @@
 #include "program.h"
 
 enum ErrorType {
-    ERROR_NONE
+    ERROR_NONE,
+    ARGS_ERROR
 };
 
 typedef struct {
