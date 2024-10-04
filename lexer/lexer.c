@@ -74,13 +74,18 @@ char* next_token(FILE* file) {
 Error lex(FILE* file) 
 {
     Error error = new_error();
+    if(file == NULL)
+    {
+        error.error_type = ARGS_ERROR;
+        return error;
+    }
 
     Tokens tokens = new_tokens();
 
     while(!feof(file)) 
     {
         char* token = next_token(file);
-        if(strcmp(token, "") == 0) {continue;}
+        if(token == NULL || strcmp(token, "") == 0) {continue;}
         Token t;
         t.token = buffer_alloc(strlen(token) + 1);
         strcpy(t.token, token);
