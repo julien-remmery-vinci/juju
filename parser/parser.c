@@ -18,18 +18,18 @@ program new_program() {
 }
 
 // Deprecated
-int numNodes(exp e)
-{
-    switch(e->type)
-    {
-        case INT: return 1;
-        case ID: return 1;
-        case ADD: return 1 + numNodes(e->u.add.e1) + numNodes(e->u.add.e2);
-        default: perror("Impossible");
-    }
-}
+// int numNodes(exp e)
+// {
+//     switch(e->type)
+//     {
+//         case INT: return 1;
+//         case ID: return 1;
+//         case ADD: return 1 + numNodes(e->u.add.e1) + numNodes(e->u.add.e2);
+//         default: perror("Impossible");
+//     }
+// }
 
-enum dataType isDatatype(char* str)
+enum dataType getDataType(char* str)
 {
     enum dataType type;
     if(strcmp(str, "int") == 0) {
@@ -40,18 +40,18 @@ enum dataType isDatatype(char* str)
     return type;
 }
 
-enum reserved isReserved(char* str)
+enum reserved getReserved(char* str)
 {
     enum reserved r;
     if(strcmp(str, "return") == 0) {
         r = RETURN;
         return r;
     }
-    r = NONE;
+    r = RESERVED_NONE;
     return r;
 }
 
-enum operation isoperator(char* str)
+enum operation getOperation(char* str)
 {
     enum operation o = OPERATIONS_NONE;
     switch(str[0])
@@ -79,7 +79,7 @@ exp new_exp()
 
 exp prev_exp(program p)
 {
-    if(p->nbExp == 0) return NULL;
+    if(p->nbExp <= 0) return NULL;
     return p->expressions[p->nbExp -1];
 }
 
@@ -116,7 +116,7 @@ exp next_exp(Tokens tokens, int* i)
         return next;
     }
 
-    enum dataType type = isDatatype(token);
+    enum dataType type = getDataType(token);
     if(type != DATATYPE_NONE)
     {
         next->type = DATATYPE;
@@ -124,8 +124,8 @@ exp next_exp(Tokens tokens, int* i)
         return next;
     }
 
-    enum reserved reserved = isReserved(token);
-    if(reserved != NONE)
+    enum reserved reserved = getReserved(token);
+    if(reserved != RESERVED_NONE)
     {
         // TODO : add reserved words handling
         next->type = RESERVED;
@@ -135,7 +135,7 @@ exp next_exp(Tokens tokens, int* i)
         return next;
     }
 
-    enum operation operation = isoperator(token);
+    enum operation operation = getOperation(token);
     if(operation != OPERATIONS_NONE)
     {
         // TODO : REFACTOR
@@ -158,7 +158,7 @@ exp next_exp(Tokens tokens, int* i)
     if((*i) - 1 < tokens.nbTokens)
     {
         char* prevToken = tokens.tokens[(*i) - 2].token;
-        if(isDatatype(prevToken))
+        if(getDataType(prevToken))
         {
             return next;
         }
