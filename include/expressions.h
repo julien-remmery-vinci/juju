@@ -1,15 +1,24 @@
 #ifndef EXPRESSIONS_H
 #define EXPRESSIONS_H
 
+/*
+    Definition of exp type
+*/
 typedef struct exp* exp;
 
+/*
+    Enum data types
+*/
 enum dataType {
     DATATYPE_NONE,
     DATATYPE_INTEGER
 };
 
+/*
+    Enum of reserved words
+*/
 enum reserved {
-    NONE,
+    RESERVED_NONE,
     RETURN,
     IF,
     WHILE,
@@ -17,6 +26,9 @@ enum reserved {
     FOR
 };
 
+/*
+    Enum of expressions types
+*/
 enum expType {
     INT,
     ID,
@@ -31,6 +43,9 @@ enum expType {
     RESERVED
 };
 
+/*
+    Enum of operations types
+*/
 enum operation {
     OPERATIONS_NONE,
     OPERATIONS_ADD,

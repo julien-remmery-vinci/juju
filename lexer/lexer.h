@@ -5,22 +5,28 @@
 #include "../include/error.h"
 
 /*  
-    Create and return a new Tokens struct     
+    Create a Tokens struct 
+        - nbTokens is set to 0
+    Return : the created struct   
 */  
 Tokens new_tokens();
 
 /*  
-    Args : FILE* opened with 'r' option
+    Get the next token in the file
+    Args : 
+        - FILE* opened with 'r' option
     Return the next token found in file :
         - NULL if no token found 
 */
 char* next_token(FILE* file);
 
 /*  
-    Args : FILE* opened with 'r' option
+    Retrieve an array of tokens from a given file
+    Args : 
+        - FILE* opened with 'r' option
     Return Error struct with error type set to corresponding error :
         - ARGS_ERROR : provided file is NULL 
-        - ERROR_NONE : 
+        - ERROR_NONE : no error during lexing
 */
 Error lex(FILE* file);
 
