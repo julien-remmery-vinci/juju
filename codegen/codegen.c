@@ -283,7 +283,7 @@ char* return_code(exp e)
 
 void add_default_return(char** code)
 {
-    strcat(*code, "\tmovl $0, %eax\n");
+    sprintf(*code + strlen(*code), "\tmovl $%d, %%eax\n", DEFAULT_RETURN_CODE);
 }
 
 char* builtin_print_code(exp e)
