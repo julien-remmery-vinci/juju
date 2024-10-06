@@ -53,4 +53,6 @@ void free_tokens(Tokens tokens);
 
 char* buffer_alloc(int size);
 
+void concat_text(char** buffer, int* buffer_size, char* concat);
+
 #endif

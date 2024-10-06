@@ -304,3 +304,24 @@ char* buffer_alloc(int size)
     memset(buff, 0, size);
     return buff;
 }
+
+void concat_text(char** buffer, int* buffer_size, char* concat)
+{
+    int concat_len = strlen(concat);
+    if(*buffer == NULL)
+    {
+        *buffer = malloc(concat_len + 1);
+        *buffer_size = concat_len + 1;
+        strcpy(*buffer, concat);
+        return;
+    }
+    int buffer_len = strlen(*buffer);
+    if(*buffer_size >= buffer_len + concat_len)
+    {
+        strcat(*buffer, concat);
+        return;
+    }
+    *buffer = realloc(*buffer, buffer_len + concat_len + 1);
+    strcat(*buffer, concat);
+    *buffer_size = buffer_len + concat_len;
+}
