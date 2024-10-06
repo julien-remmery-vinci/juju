@@ -281,9 +281,11 @@ char* return_code(exp e)
     return code;
 }
 
-void add_default_return(char** code)
+char* get_default_return()
 {
-    sprintf(*code + strlen(*code), "\tmovl $%d, %%eax\n", DEFAULT_RETURN_CODE);
+    char* code = buffer_alloc(DEFAULT_BUFFER_SIZE);
+    sprintf(code, "\tmovl $%d, %%eax\n", DEFAULT_RETURN_CODE);
+    return code;
 }
 
 char* builtin_print_code(exp e)

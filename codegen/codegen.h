@@ -105,11 +105,10 @@ char* affect_code(exp e, int* n_locals);
 char* return_code(exp e);
 
 /*
-    Add the assembly code representing the default return expression (default code = 0)to given string
-    Args :
-        - code : the code to add return statement to
+    Get the assembly code representing the default return statement (DEFAULT_RETURN_CODE)
+    Return : the generated code
 */
-void add_default_return(char** code);
+char* get_default_return();
 
 /*
     Get the assembly code representing a builtin print expression
