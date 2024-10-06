@@ -16,7 +16,7 @@
 /*
     Default allocated buffer size (subject to change, make it dynamic)
 */
-#define DEFAULT_BUFFER_SIZE 1000
+#define DEFAULT_BUFFER_SIZE 1024
 
 /*
     Default return code, success
