@@ -200,11 +200,6 @@ void free_exp(exp e) {
             free(e->u.var.id);
             free(e->u.var.reg);
             break;
-        case ADD:
-            // REFACTOR TO OPERATION EXP
-            free_exp(e->u.add.e1);
-            free_exp(e->u.add.e2);
-            break;
         case OPERATION:
             free_exp(e->u.operation.e1);
             free_exp(e->u.operation.e2);
@@ -236,6 +231,7 @@ void free_exp(exp e) {
                 free_exp(e->u.func_call.params->expressions[i]);
             }
             free(e->u.func_call.params->expressions);
+            free(e->u.func_call.params);
             break;
         default:
             printf("Not yet implemented exp type freeing: %d\n", e->type);

@@ -169,8 +169,7 @@ exp next_exp(Tokens tokens, int* i)
         char* nextToken = tokens.tokens[(*i)].token;
         if(isopenparenthese(nextToken))
         {
-            program program = new_program();
-            exp call = parse_call(program, tokens, i, token);
+            exp call = parse_call(NULL, tokens, i, token);
             (*i)++;
             free_exp(next);
             return call;
